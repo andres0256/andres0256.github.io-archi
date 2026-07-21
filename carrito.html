@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="logo-2.png">
+
+    <title>Carrito archiv</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #1a1a1a; color: white; padding: 30px; }
+        .contenedor { max-width: 600px; margin: 0 auto; background: #2b2b2b; padding: 20px; border-radius: 8px; }
+        .item-carrito { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #444; }
+        .total { font-size: 1.5em; font-weight: bold; margin-top: 20px; text-align: right; }
+        .btn { display: inline-block; padding: 10px 20px; color: white; text-decoration: none; border-radius: 4px; margin-top: 20px; cursor: pointer;}
+        .btn-volver { background: #555; }
+        .btn-vaciar { background: #dc3545; border: none; }
+        /* --- ESTILOS GENERALES (Para computadora) --- */
+.menu-derecha {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.contenedor-carta {
+    width: 300px; /* Tamaño normal en PC */
+}
+
+
+/* --- CÓDIGO PARA CELULARES (Pantallas menores a 768px) --- */
+@media (max-width: 768px) {
+    
+    /* El cuerpo de la página ya no se desborda */
+    body {
+        padding: 10px;
+        font-size: 14px; /* Achicamos un poco la letra si es necesario */
+    }
+
+    /* Si tus productos están en fila, en el celular se pondrán uno abajo del otro */
+    .productos, .menu-derecha {
+        flex-direction: column; 
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Las tarjetas de tus prendas se adaptarán al ancho de la pantalla del celular */
+    .contenedor-carta {
+        width: 100%; 
+        max-width: 320px; /* Para que no se estiren infinitamente */
+    }
+
+    /* Ajustar imágenes para que nunca se salgan de su contenedor */
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}
+    </style>
+</head>
+<body>
+
+<div class="contenedor">
+    <h1>Tu Carrito🛒</h1>
+    
+    <div id="lista-productos"></div>
+    
+    <div class="total" id="precio-total">Total: $0</div>
+    
+    <a href="index.html" class="btn btn-volver">← Seguir Comprando</a>
+    <button onclick="limpiarCarrito()" class="btn btn-vaciar">Vaciar Carrito</button>
+    <a href="pagos.html" class="btn btn-volver">←  Comprar</a>
+   
+</div>
+
+<script>
+    function mostrarCarrito() {
+        // Leer los productos que guardamos en la página anterior
+        let carrito = JSON.parse(localStorage.getItem('miCarrito')) || [];
+        let contenedor = document.getElementById('lista-productos');
+        let totalElemento = document.getElementById('precio-total');
+        
+        contenedor.innerHTML = ""; // Limpiar la pantalla por si acaso
+        let sumaTotal = 0;
+        
+        if(carrito.length === 0) {
+            contenedor.innerHTML = "<p>No has agregado ningún producto todavía.</p>";
+            totalElemento.innerText = "Total: $0";
+            return;
+        }
+        
+        // Dibujar cada producto en la pantalla
+        carrito.forEach(item => {
+            contenedor.innerHTML += `
+                <div class="item-carrito">
+                    <span>${item.nombre}</span>
+                    <span>$${item.precio.toLocaleString()}</span>
+                </div>
+            `;
+            sumaTotal += item.precio;
+        });
+        
+        // Actualizar el total
+        totalElemento.innerText = `Total: $${sumaTotal.toLocaleString()}`;
+    }
+
+    function limpiarCarrito() {
+        localStorage.removeItem('miCarrito'); // Borra los productos almacenados
+        mostrarCarrito(); // Vuelve a pintar la página vacía
+    }
+
+    // Arrancar la función en cuanto abra la página
+    window.onload = mostrarCarrito;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="logo.png">
+    <title>Carrito archiv - Pago Wompi</title>
+
+    <!-- SCRIPT OFICIAL DE WIDGET DE PAGOS DE WOMPI -->
+    <script type="text/javascript" src="https://checkout.wompi.co/widget.js"></script>
+
+    <style>
+        :root {
+            --negro-fondo: #0a050d;
+            --blanco: #ffffff;
+            --rojo-vaciar: #dc3545;
+            --verde-comprar: #25d366;
+            --color-principal: #00b4d8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background-color: var(--negro-fondo); color: var(--blanco); padding: 40px 20px; }
+        .contenedor { max-width: 600px; margin: 0 auto; background: #2b2b2b; padding: 25px; border-radius: 12px; }
+        h1 { margin-bottom: 20px; text-align: center; }
+
+        .item-carrito { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #444; gap: 15px; }
+        .item-info { display: flex; align-items: center; gap: 15px; }
+        .item-imagen { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; background-color: #1a1a1a; }
+
+        .seccion-bloque { margin-top: 20px; padding: 15px; background: #1f1f1f; border-radius: 8px; border: 1px solid #3d3d3d; }
+        .seccion-bloque h3 { margin-bottom: 12px; font-size: 1rem; color: #ddd; }
+
+        .campo-grupo { margin-bottom: 12px; }
+        .campo-grupo label { display: block; font-size: 0.85rem; margin-bottom: 5px; color: #ccc; }
+        .campo-grupo input, .campo-grupo textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background-color: #1a1a1a;
+            color: white;
+            font-size: 0.95rem;
+        }
+        .campo-grupo textarea { resize: vertical; min-height: 60px; }
+        .campo-grupo input:focus, .campo-grupo textarea:focus {
+            outline: none;
+            border-color: var(--verde-comprar);
+        }
+
+        .total { font-size: 1.2em; font-weight: bold; margin-top: 20px; text-align: right; }
+        .acciones { display: flex; gap: 10px; margin-top: 25px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; color: white; }
+        .btn-comprar { background: var(--verde-comprar); color: black; }
+        .btn-vaciar { background: var(--rojo-vaciar); }
+
+        /* Botón flotante indicador de prendas */
+        #flotante-carrito {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #25d366;
+            color: #000;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            cursor: pointer;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: transform 0.2s;
+        }
+        #flotante-carrito:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+<div class="contenedor">
+    <h1>Tu Carrito 🛒</h1>
+    <div id="lista-productos"></div>
+
+    <div id="seccion-checkout" style="display: none;">
+
+        <div class="seccion-bloque">
+            <h3>Datos del cliente:</h3>
+
+            <div class="campo-grupo">
+                <label for="cliente-cedula">Número de Cédula (*):</label>
+                <input type="text" id="cliente-cedula" placeholder="Ej: 1018123456" required>
+            </div>
+
+            <div class="campo-grupo">
+                <label for="cliente-telefono">Teléfono / WhatsApp Principal (*):</label>
+                <input type="tel" id="cliente-telefono" placeholder="Ej: 3001234567" required>
+            </div>
+
+            <div class="campo-grupo">
+                <label for="cliente-telefono2">Teléfono Secundario (Opcional):</label>
+                <input type="tel" id="cliente-telefono2" placeholder="Ej: 3109876543">
+            </div>
+
+            <div class="campo-grupo">
+                <label for="cliente-municipio">Ciudad / Municipio (*):</label>
+                <input type="text" id="cliente-municipio" placeholder="Ej: Arbelaez, Cundinamarca" required>
+            </div>
+
+            <div class="campo-grupo">
+                <label for="cliente-direccion">Dirección Completa (*):</label>
+                <input type="text" id="cliente-direccion" placeholder="Ej: Calle 10 # 4-20 B/ Centro" required>
+            </div>
+
+            <div class="campo-grupo">
+                <label for="cliente-info-adicional">Información adicional del lugar de entrega (Opcional):</label>
+                <textarea id="cliente-info-adicional" placeholder="Ej: Apto 201, Torres de Santa Inés, dejar en portería"></textarea>
+            </div>
+        </div>
+
+        <div class="total" id="precio-total">Total: $0</div>
+        <div class="acciones">
+            <button onclick="limpiar()" class="btn btn-vaciar">Vaciar</button>
+            <button id="btn-pagar" onclick="procesarPagoWompi()" class="btn btn-comprar">
+                Pagar con Wompi →
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Botón flotante global para ver estado del carrito -->
+<a href="carrito.html" id="flotante-carrito">🛒 <span id="contador-prendas-flotante">0/6</span> prendas</a>
+
+<script>
+    // Llave pública de Wompi de producción
+    const WOMPI_PUBLIC_KEY = "pub_prod_aMSFVYcsNanbzGoAWLp9Jj7psyZQ6BKo";
+
+    let totalAcumulado = 0;
+    const enlaceWhatsAppBase = "https://wa.me/573124218541";
+
+    function actualizarContadorFlotante() {
+        let carrito = JSON.parse(localStorage.getItem('miCarrito')) || [];
+        let totalPrendas = carrito.reduce((sum, item) => sum + (item.cantidad || 1), 0);
+        let spanContador = document.getElementById('contador-prendas-flotante');
+        if (spanContador) {
+            spanContador.innerText = `${totalPrendas}/6`;
+        }
+    }
+
+    function mostrarCarrito() {
+        let carrito = JSON.parse(localStorage.getItem('miCarrito')) || [];
+        let cont = document.getElementById('lista-productos');
+        let seccionCheckout = document.getElementById('seccion-checkout');
+        let totalElemento = document.getElementById('precio-total');
+
+        cont.innerHTML = "";
+        totalAcumulado = 0;
+        actualizarContadorFlotante();
+
+        if (carrito.length === 0) {
+            cont.innerHTML = "<p style='text-align:center; padding: 25px 0; color: #aaa;'>El carrito está vacío 🛒</p>";
+            seccionCheckout.style.display = 'none';
+            return;
+        }
+
+        seccionCheckout.style.display = 'block';
+
+        carrito.forEach(item => {
+            let cantidad = item.cantidad || 1;
+            let precioUnitario = item.precio || 0;
+            let subtotal = precioUnitario * cantidad;
+            let imagenSrc = item.imagen || 'camisera e 1.jpg';
+            totalAcumulado += subtotal;
+
+            cont.innerHTML += `
+                <div class="item-carrito">
+                    <div class="item-info">
+                        <img src="${imagenSrc}" alt="${item.nombre}" class="item-imagen">
+                        <div>
+                            <strong>${item.nombre}</strong><br>
+                            <small style="color: #aaa;">Cantidad: ${cantidad}</small>
+                        </div>
+                    </div>
+                    <strong>$${subtotal.toLocaleString('es-CO')}</strong>
+                </div>
+            `;
+        });
+
+        // El total es exactamente la suma del carrito
+        totalElemento.innerText = `Total: $${totalAcumulado.toLocaleString('es-CO')}`;
+    }
+
+    function validarFormulario() {
+        let cedula = document.getElementById('cliente-cedula').value.trim();
+        let telefono = document.getElementById('cliente-telefono').value.trim();
+        let municipio = document.getElementById('cliente-municipio').value.trim();
+        let direccion = document.getElementById('cliente-direccion').value.trim();
+
+        if (!cedula || !telefono) {
+            alert("Por favor completa tu número de cédula y teléfono principal.");
+            return false;
+        }
+        if (!municipio || !direccion) {
+            alert("Por favor completa la ciudad y dirección de envío.");
+            return false;
+        }
+        return true;
+    }
+
+    function procesarPagoWompi() {
+        if (totalAcumulado <= 0) {
+            alert("Tu carrito está vacío.");
+            return;
+        }
+        if (!validarFormulario()) {
+            return;
+        }
+
+        const referenciaUnica = 'ARCHIV-' + Date.now();
+        const montoEnCentavos = Math.round(totalAcumulado * 100);
+
+        // Teléfono solo con números (10 dígitos en Colombia)
+        const telefono = document.getElementById('cliente-telefono').value.replace(/\D/g, '').slice(-10);
+        const cedula = document.getElementById('cliente-cedula').value.trim();
+
+        const checkout = new WidgetCheckout({
+            currency: 'COP',
+            amountInCents: montoEnCentavos,
+            reference: referenciaUnica,
+            publicKey: WOMPI_PUBLIC_KEY,
+            customerData: {
+                phoneNumber: telefono,
+                phoneNumberPrefix: '+57',
+                legalId: cedula,
+                legalIdType: 'CC'
+            }
+        });
+
+        checkout.open(function (result) {
+            const transaction = result.transaction;
+
+            if (transaction && transaction.status === 'APPROVED') {
+                alert("¡Pago aprobado con éxito! Redirigiendo a WhatsApp...");
+                enviarPedidoWhatsApp(referenciaUnica);
+            } else if (transaction && transaction.status === 'DECLINED') {
+                alert("El pago fue declinado. Por favor intenta con otro medio de pago.");
+            }
+        });
+    }
+
+    function enviarPedidoWhatsApp(referenciaUnica) {
+        let carrito = JSON.parse(localStorage.getItem('miCarrito')) || [];
+        let detalleProductos = "";
+        carrito.forEach((item, index) => {
+            let sub = (item.precio || 0) * (item.cantidad || 1);
+            detalleProductos += `${index + 1}. ${item.nombre} x${item.cantidad || 1} - $${sub.toLocaleString('es-CO')}\n`;
+        });
+
+        let cedulaCliente = document.getElementById('cliente-cedula').value.trim();
+        let telCliente = document.getElementById('cliente-telefono').value.trim();
+        let tel2Cliente = document.getElementById('cliente-telefono2').value.trim();
+        let munCliente = document.getElementById('cliente-municipio').value.trim();
+        let dirCliente = document.getElementById('cliente-direccion').value.trim();
+        let infoCliente = document.getElementById('cliente-info-adicional').value.trim();
+
+        let mensaje = `✅ *PEDIDO PAGADO EXITOSAMENTE (WOMPI)*\n\n`;
+        mensaje += `*Referencia:* ${referenciaUnica}\n\n`;
+        mensaje += `👤 *DATOS DEL CLIENTE:*\n`;
+        mensaje += `• *Cédula:* ${cedulaCliente}\n`;
+        mensaje += `• *Teléfono:* ${telCliente}\n`;
+        if (tel2Cliente) mensaje += `• *Teléfono 2:* ${tel2Cliente}\n`;
+        mensaje += `• *Dirección:* ${dirCliente}, ${munCliente}\n`;
+        if (infoCliente) mensaje += `• *Info adicional:* ${infoCliente}\n`;
+
+        mensaje += `\n📦 *DETALLE:*\n${detalleProductos}\n`;
+        mensaje += `💰 *MONTO PAGADO:* $${totalAcumulado.toLocaleString('es-CO')} COP\n\n`;
+        mensaje += `Hola, acabo de realizar mi pago seguro a través de Wompi. Adjunto mi referencia y detalles.`;
+
+        localStorage.removeItem('miCarrito');
+        window.open(`${enlaceWhatsAppBase}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        mostrarCarrito();
+    }
+
+    function limpiar() {
+        localStorage.removeItem('miCarrito');
+        mostrarCarrito();
+    }
+
+    mostrarCarrito();
+</script>
+</body>
+</html>
